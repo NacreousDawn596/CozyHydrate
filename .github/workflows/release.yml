@@ -40,22 +40,15 @@ jobs:
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
 
-      - name: Build iOS
-        run: bunx eas build -p ios --profile production --non-interactive --json > ios.json
-        env:
-          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
-
       - name: Download artifacts with nice names
         run: |
           VERSION=${GITHUB_REF_NAME}
 
           APK_URL=$(jq -r '.[0].artifacts.buildUrl' apk.json)
           AAB_URL=$(jq -r '.[0].artifacts.buildUrl' aab.json)
-          IOS_URL=$(jq -r '.[0].artifacts.buildUrl' ios.json)
 
           curl -L "$APK_URL" -o "CozyHydrate-${VERSION}-android.apk"
           curl -L "$AAB_URL" -o "CozyHydrate-${VERSION}-android.aab"
-          curl -L "$IOS_URL" -o "CozyHydrate-${VERSION}-ios.ipa"
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
@@ -63,7 +56,6 @@ jobs:
           files: |
             CozyHydrate-${{ github.ref_name }}-android.apk
             CozyHydrate-${{ github.ref_name }}-android.aab
-            CozyHydrate-${{ github.ref_name }}-ios.ipa
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
