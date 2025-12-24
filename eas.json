@@ -3,16 +3,15 @@
     "preview": {
       "android": {
         "buildType": "apk"
-      },
-      "distribution": "internal"
+      }
     },
     "production": {
       "android": {
         "buildType": "app-bundle"
-      },
-      "ios": {
-        "simulator": false
       }
+    },
+    "ios": {
+      "production": {}
     }
   }
 }
