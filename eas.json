@@ -8,10 +8,8 @@
     "production": {
       "android": {
         "buildType": "app-bundle"
-      }
-    },
-    "ios": {
-      "production": {}
+      },
+      "ios": {}
     }
   }
 }
