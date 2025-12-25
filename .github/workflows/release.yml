@@ -9,8 +9,8 @@ permissions:
   contents: write
 
 jobs:
-  build:
-    name: Build binaries
+  build-android:
+    name: Build Android
     runs-on: ubuntu-latest
 
     steps:
@@ -43,7 +43,7 @@ jobs:
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
 
-      - name: Download artifacts with nice names
+      - name: Download Android artifacts with nice names
         run: |
           VERSION=${GITHUB_REF_NAME}
 
@@ -53,12 +53,119 @@ jobs:
           curl -L "$APK_URL" -o "CozyHydrate-${VERSION}-android.apk"
           curl -L "$AAB_URL" -o "CozyHydrate-${VERSION}-android.aab"
 
+      - name: Upload Android artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-artifacts
+          path: |
+            CozyHydrate-${{ github.ref_name }}-android.apk
+            CozyHydrate-${{ github.ref_name }}-android.aab
+
+  build-windows:
+    name: Build Windows
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
+
+      - name: Install deps
+        run: bun install
+
+      - name: Install Expo & EAS
+        run: |
+          bunx expo --version
+          bunx eas --version
+
+      - name: Build Windows Executable
+        run: bunx eas build -p windows --profile production --non-interactive --json > windows.json
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Download Windows artifact
+        run: |
+          $version = $env:GITHUB_REF_NAME
+          $windowsJson = Get-Content windows.json | ConvertFrom-Json
+          $windowsUrl = $windowsJson[0].artifacts.buildUrl
+          
+          curl.exe -L $windowsUrl -o "CozyHydrate-${version}-windows.exe"
+
+      - name: Upload Windows artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-artifact
+          path: CozyHydrate-${{ github.ref_name }}-windows.exe
+
+  build-linux:
+    name: Build Linux
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
+
+      - name: Install deps
+        run: bun install
+
+      - name: Install Expo & EAS
+        run: |
+          bunx expo --version
+          bunx eas --version
+
+      - name: Build Linux Executable
+        run: bunx eas build -p linux --profile production --non-interactive --json > linux.json
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Download Linux artifact
+        run: |
+          VERSION=${GITHUB_REF_NAME}
+
+          LINUX_URL=$(jq -r '.[0].artifacts.buildUrl' linux.json)
+
+          curl -L "$LINUX_URL" -o "CozyHydrate-${VERSION}-linux.AppImage"
+
+      - name: Upload Linux artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-artifact
+          path: CozyHydrate-${{ github.ref_name }}-linux.AppImage
+
+  create-release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    needs: [build-android, build-windows, build-linux]
+    
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        
+      - name: List downloaded files
+        run: find . -type f -name "*.apk" -o -name "*.aab" -o -name "*.exe" -o -name "*.AppImage"
+        
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            CozyHydrate-${{ github.ref_name }}-android.apk
-            CozyHydrate-${{ github.ref_name }}-android.aab
+            **/*.apk
+            **/*.aab
+            **/*.exe
+            **/*.AppImage
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
