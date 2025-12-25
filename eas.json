@@ -9,7 +9,12 @@
       "android": {
         "buildType": "app-bundle"
       },
-      "ios": {}
+      "windows": {
+        "target": "store"
+      },
+      "linux": {
+        "target": "AppImage"
+      }
     }
   }
 }
