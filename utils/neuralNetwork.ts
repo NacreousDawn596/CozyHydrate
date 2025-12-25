@@ -3,6 +3,7 @@ import type {
   NeuralNetworkOutput,
   DrinkLog,
   ReminderResponse,
+  BatchPrediction
 } from "@/types/hydration";
 
 /* =======================
@@ -95,6 +96,58 @@ function getHourlyPattern(drinks: DrinkLog[]): number[] {
    Prediction
 ======================= */
 
+export function predictReminderBatch(
+  input: NeuralNetworkInput,
+  weights: NetworkWeights = DEFAULT_WEIGHTS,
+  count = 12
+): BatchPrediction[] {
+
+  const results: BatchPrediction[] = [];
+
+  let virtualTime = Date.now();
+  let virtualDrinks = [...input.recentDrinks];
+  let virtualResponses = [...input.recentResponses];
+
+  for (let i = 0; i < count; i++) {
+    const hour = new Date(virtualTime).getHours();
+
+    const prediction = predictNextReminder(
+      {
+        ...input,
+        currentDate: virtualTime,
+        currentHour: hour,
+        recentDrinks: virtualDrinks,
+        recentResponses: virtualResponses,
+      },
+      weights
+    );
+
+    const confidence = Math.abs(prediction.drinkProbability - 0.5) * 2;
+
+    results.push({
+      delayMs: prediction.nextReminderDelay,
+      probability: prediction.drinkProbability,
+      confidence,
+    });
+
+    // ⏩ Advance virtual time
+    virtualTime += prediction.nextReminderDelay;
+
+    // 🧠 Simulate behavior (VERY important)
+    if (prediction.drinkProbability > 0.6) {
+      virtualDrinks.push({
+        id: `virtual-${virtualTime}-${i}`,
+        timestamp: virtualTime,
+        volume: 250,
+        manualLog: false,
+      });
+    }
+  }
+
+  return results;
+}
+
+
 export function predictNextReminder(
   input: NeuralNetworkInput,
   weights: NetworkWeights = DEFAULT_WEIGHTS
@@ -129,16 +182,22 @@ export function predictNextReminder(
     sigmoid(hidden * weights.hiddenWeight + weights.bias);
 
   /* -------- Delay Logic -------- */
-  const baseDelay = 3 * 60 * 60 * 1000; // 3h
+  const baseDelay =
+  2 * 60 * 60 * 1000 *
+  (1 - activityLevel * 0.3 - tempScore * 0.2);
+
 
   const confidence = Math.abs(probability - 0.5) * 2;
-  const variability =
-    (1 - confidence) * 30 * 60 * 1000; // max 30min when uncertain
+const variability =
+  (Math.random() * 2 - 1) *
+  (1 - confidence) *
+  30 * 60 * 1000;
+
 
   const adaptiveDelay =
     baseDelay *
     (probability > 0.65 ? 0.75 :
-     probability < 0.35 ? 1.25 : 1.0);
+      probability < 0.35 ? 1.25 : 1.0);
 
   /* -------- Goal Adjustment -------- */
   const goalAdjustmentFactor = 1.0 + (activityLevel - 0.5) * weights.goalAdjustmentWeight + (tempScore - 0.5) * weights.temperatureWeight;

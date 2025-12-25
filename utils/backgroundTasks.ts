@@ -1,9 +1,16 @@
 import * as BackgroundFetch from 'expo-background-fetch';
 import * as TaskManager from 'expo-task-manager';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { predictNextReminder, DEFAULT_WEIGHTS, type NetworkWeights } from './neuralNetwork';
-import { scheduleHydrationReminder } from './notifications';
-import type { UserProfile, DrinkLog, ReminderResponse } from '@/types/hydration';
+import { DEFAULT_WEIGHTS, type NetworkWeights, predictReminderBatch } from './neuralNetwork';
+import { scheduleHydrationBatch } from "./notifications"
+import type { UserProfile as OriginalUserProfile, DrinkLog, ReminderResponse } from '@/types/hydration';
+
+// Extend UserProfile to include activityLevel, temperature, and humidity if not present
+type UserProfile = OriginalUserProfile & {
+    activityLevel?: number;
+    temperature?: number;
+    humidity?: number;
+};
 
 export const HYDRATION_REMINDER_TASK = 'BACKGROUND_HYDRATION_REMINDER';
 
@@ -16,23 +23,32 @@ const STORAGE_KEYS = {
 
 TaskManager.defineTask(HYDRATION_REMINDER_TASK, async () => {
     try {
-        const [profileStr, logsStr, responsesStr, weightsStr] = await Promise.all([
-            AsyncStorage.getItem(STORAGE_KEYS.PROFILE),
-            AsyncStorage.getItem(STORAGE_KEYS.LOGS),
-            AsyncStorage.getItem(STORAGE_KEYS.RESPONSES),
-            AsyncStorage.getItem(STORAGE_KEYS.WEIGHTS),
-        ]);
+        const [profileStr, logsStr, responsesStr, weightsStr] =
+            await Promise.all([
+                AsyncStorage.getItem(STORAGE_KEYS.PROFILE),
+                AsyncStorage.getItem(STORAGE_KEYS.LOGS),
+                AsyncStorage.getItem(STORAGE_KEYS.RESPONSES),
+                AsyncStorage.getItem(STORAGE_KEYS.WEIGHTS),
+            ]);
 
-        const profile = profileStr ? (JSON.parse(profileStr) as UserProfile) : null;
+        const profile = profileStr
+            ? (JSON.parse(profileStr) as UserProfile)
+            : null;
+
         if (!profile || !profile.onboardingComplete) {
             return BackgroundFetch.BackgroundFetchResult.NoData;
         }
 
-        const drinkLogs = logsStr ? (JSON.parse(logsStr) as DrinkLog[]) : [];
-        const reminderResponses = responsesStr ? (JSON.parse(responsesStr) as ReminderResponse[]) : [];
-        const weights = weightsStr ? (JSON.parse(weightsStr) as NetworkWeights) : DEFAULT_WEIGHTS;
+        const drinkLogs = logsStr ? JSON.parse(logsStr) : [];
+        const reminderResponses = responsesStr
+            ? JSON.parse(responsesStr)
+            : [];
 
-        const prediction = predictNextReminder(
+        const weights = weightsStr
+            ? JSON.parse(weightsStr)
+            : DEFAULT_WEIGHTS;
+
+        const batch = predictReminderBatch(
             {
                 currentDate: Date.now(),
                 currentHour: new Date().getHours(),
@@ -40,18 +56,23 @@ TaskManager.defineTask(HYDRATION_REMINDER_TASK, async () => {
                 weight: profile.weight,
                 recentDrinks: drinkLogs.slice(-20),
                 recentResponses: reminderResponses.slice(-20),
+                activityLevel: profile.activityLevel ?? 0.5,
+                temperature: profile.temperature ?? 22,
+                humidity: profile.humidity ?? 0.5,
             },
-            weights
+            weights,
+            12
         );
 
-        await scheduleHydrationReminder(prediction.nextReminderDelay);
+        await scheduleHydrationBatch(batch);
 
         return BackgroundFetch.BackgroundFetchResult.NewData;
-    } catch (error) {
-        console.error('Background task failed:', error);
+    } catch (err) {
+        console.error('Background task failed:', err);
         return BackgroundFetch.BackgroundFetchResult.Failed;
     }
 });
+
 
 export async function registerBackgroundTasks() {
     try {

@@ -13,6 +13,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useHydration } from "@/context/HydrationContext";
 import HistoryChart from "@/components/HistoryChart";
+import { rescheduleHydration } from "@/utils/hydrationScheduler"
 
 export default function HistoryScreen() {
   const { drinkLogs, addDrinkLog, deleteDrinkLog, colors } = useHydration();
@@ -23,6 +24,8 @@ export default function HistoryScreen() {
     const v = parseFloat(volume);
     if (v > 0 && v <= 2000) {
       await addDrinkLog(v, true);
+      await rescheduleHydration();
+
       setShowAddModal(false);
       setVolume("250");
     }

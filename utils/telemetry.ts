@@ -4,6 +4,7 @@ interface TelemetryEvent {
   response?: "done" | "not_yet" | null;
   waterVolume?: number;
   eventType: "reminder_sent" | "reminder_response" | "manual_log";
+  count?: number;
 }
 
 export async function sendTelemetry(event: TelemetryEvent): Promise<void> {

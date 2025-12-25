@@ -47,3 +47,9 @@ export interface HydrationStats {
   todayGoal: number;
   todayLogs: DrinkLog[];
 }
+
+export type BatchPrediction = {
+  delayMs: number;
+  confidence: number;
+  probability: number;
+};
