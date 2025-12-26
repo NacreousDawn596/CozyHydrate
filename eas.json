@@ -8,12 +8,6 @@
     "production": {
       "android": {
         "buildType": "app-bundle"
-      },
-      "windows": {
-        "target": "store"
-      },
-      "linux": {
-        "target": "AppImage"
       }
     }
   }

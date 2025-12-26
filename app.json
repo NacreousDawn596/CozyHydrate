@@ -36,8 +36,10 @@
       ]
     },
     "web": {
-      "favicon": "./assets/images/favicon.png"
+      "favicon": "./assets/images/favicon.png",
+      "publicPath": "."
     },
+    
     "plugins": [
       "expo-font",
       "expo-web-browser",
