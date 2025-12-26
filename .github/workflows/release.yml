@@ -83,7 +83,7 @@ jobs:
         uses: oven-sh/setup-bun@v1
 
       - name: Install deps
-        run: bun install
+        run: bun install --legacy-peer-deps
 
       - name: Build Expo Web
         run: bunx expo export --platform web
