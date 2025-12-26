@@ -26,6 +26,7 @@
     "@stardazed/streams-text-encoding": "^1.0.2",
     "@tanstack/react-query": "^5.83.0",
     "@ungap/structured-clone": "^1.3.0",
+    "eas-cli": "^16.28.0",
     "expo": "^54.0.30",
     "expo-background-fetch": "~14.0.9",
     "expo-blur": "~15.0.8",
