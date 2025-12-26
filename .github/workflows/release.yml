@@ -1,4 +1,4 @@
-name: Mobile Release
+name: Mobile + Desktop Release
 
 on:
   push:
@@ -43,7 +43,7 @@ jobs:
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
 
-      - name: Download Android artifacts with nice names
+      - name: Download Android artifacts
         run: |
           VERSION=${GITHUB_REF_NAME}
 
@@ -61,23 +61,65 @@ jobs:
             CozyHydrate-${{ github.ref_name }}-android.apk
             CozyHydrate-${{ github.ref_name }}-android.aab
 
-  create-release:
-    name: Create Release
-    runs-on: ubuntu-latest
+  build-desktop:
+    name: Build Desktop Apps
+    runs-on: ${{ matrix.os }}
     needs: [build-android]
-    
+
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
+
+      - name: Install deps
+        run: bun install
+
+      - name: Build Expo Web
+        run: bunx expo export --platform web
+
+      - name: Build Desktop App
+        run: bunx electron-builder
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload Desktop Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: desktop-${{ matrix.os }}
+          path: |
+            dist/**/*.AppImage
+            dist/**/*Setup*.exe
+
+  create-release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+    needs: [build-android, build-desktop]
+
     steps:
       - name: Download all artifacts
         uses: actions/download-artifact@v4
-        
+
       - name: List downloaded files
-        run: find . -type f -name "*.apk" -o -name "*.aab"
-        
+        run: find . -type f
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           files: |
             **/*.apk
             **/*.aab
+            **/*.AppImage
+            **/*Setup*.exe
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

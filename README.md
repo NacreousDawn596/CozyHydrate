@@ -129,6 +129,7 @@ bun run web
 ├── components/             # Reusable UI components
 ├── constants/              # App constants & configs
 ├── context/                # React contexts
+├── electron/                # Electron App
 ├── types/                  # TypeScript types
 ├── utils/                  # Utilities & neural network logic
 ├── app.json                # Expo config
