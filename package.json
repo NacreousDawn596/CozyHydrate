@@ -73,6 +73,7 @@
   },
   "private": true,
   "build": {
+    "npmRebuild": false,
     "appId": "com.cozyhydrate.app",
     "productName": "CozyHydrate",
     "extraMetadata": {
